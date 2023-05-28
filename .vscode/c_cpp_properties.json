@@ -4,7 +4,8 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/usr/local/include/eigen3"
+                "/usr/include/eigen3/",
+                "/usr/include/SDL2/"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",
