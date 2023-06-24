@@ -76,50 +76,61 @@ TEST(OperationTestSuite, MatMulTest_1)
     EXPECT_TRUE(expected_res.isApprox(res_eigen_mtx, 0.001));
 }
 
-// TEST(OperationTestSuite, MatMulTest_2)
-// {
-//     Eigen::MatrixXf matrix_1(3, 2), matrix_2(2, 3);
-//     matrix_1 << 3.8, 0.05, 2.3, 3.35, 1.6, 2.6;
-//     matrix_2 << 1.1, 3.5, 3.7, 0.05, 1.25, 1.;
-//     needle::Tensor tensor_1(matrix_1);
-//     needle::Tensor tensor_2(matrix_2);
+TEST(OperationTestSuite, MatMulTest_2)
+{
+    needle::NdArray matrix_1(1, 3, 2), matrix_2(1, 2, 3);
+    matrix_1.setValues({{{3.8, 0.05}, {2.3, 3.35}, {1.6, 2.6}}});
+    matrix_2.setValues({{{1.1, 3.5, 3.7}, {0.05, 1.25, 1.}}});
+    needle::Tensor tensor_1(matrix_1);
+    needle::Tensor tensor_2(matrix_2);
 
-//     needle::Tensor  res_tensor = needle::matMul(tensor_1, tensor_2);
-//     Eigen::MatrixXf res_eigen{res_tensor.getNdArray()};
+    needle::Tensor res_tensor = needle::matMul(tensor_1, tensor_2);
 
-//     Eigen::MatrixXf expected_res(matrix_1.rows(), matrix_2.cols());
-//     expected_res << 4.1825, 13.3625, 14.11, 2.6975, 12.2375, 11.86, 1.89, 8.85, 8.52;
-//     EXPECT_TRUE(expected_res.isApprox(res_eigen, 0.001));
-// }
+    needle::NdArray         res_ndarray{res_tensor.getNdArray()};
+    Eigen::Tensor<float, 2> res_eigen_tensor = res_ndarray.chip(0, 0);
+    Eigen::MatrixXf         res_eigen_mtx    = eigenTensorToMatrix(res_eigen_tensor, 3, 3);
 
-// TEST(OperationTestSuite, MatMulTest_3)
-// {
-//     Eigen::Tensor<float, 3> tensor(2, 3, 4);
+    Eigen::MatrixXf expected_res(3, 3);
+    expected_res << 4.1825, 13.3625, 14.11, 2.6975, 12.2375, 11.86, 1.89, 8.85, 8.52;
+    EXPECT_TRUE(expected_res.isApprox(res_eigen_mtx, 0.001));
+}
 
-//     // Filling the tensor with values
-//     int value = 1;
-//     for (int i = 0; i < tensor.dimension(0); ++i)
-//     {
-//         for (int j = 0; j < tensor.dimension(1); ++j)
-//         {
-//             for (int k = 0; k < tensor.dimension(2); ++k)
-//             {
-//                 tensor(i, j, k) = value++;
-//             }
-//         }
-//     }
+TEST(OperationTestSuite, MatMulTest_3)
+{
+    needle::NdArray matrix_1(6, 3, 2);
+    matrix_1.setValues({{{4., 2.15}, {1.25, 1.35}, {0.75, 1.6}},
+                        {{2.9, 2.15}, {3.3, 4.1}, {2.5, 0.25}},
+                        {{2.9, 4.35}, {1.2, 3.5}, {3.55, 3.95}},
+                        {{2.55, 4.35}, {4.25, 0.2}, {3.95, 3.4}},
+                        {{2.2, 2.05}, {0.95, 1.8}, {2.7, 2.}},
+                        {{0.45, 1.1}, {3.15, 0.7}, {2.9, 1.95}}});
+    needle::NdArray matrix_2(6, 2, 3);
+    matrix_2.setValues({{{2.7, 4.05, 0.1}, {1.75, 3.05, 2.3}},
+                        {{0.55, 4.1, 2.3}, {4.45, 2.35, 2.55}},
+                        {{1.2, 3.95, 4.6}, {4.2, 3.5, 3.35}},
+                        {{2.55, 4.4, 2.05}, {2.4, 0.6, 4.65}},
+                        {{2.95, 0.8, 0.6}, {0.45, 1.3, 0.75}},
+                        {{1.25, 2.1, 0.4}, {0.85, 3.5, 3.7}}});
+    needle::Tensor tensor_1(matrix_1);
+    needle::Tensor tensor_2(matrix_2);
 
-//     // Accessing and printing the tensor elements
-//     for (int i = 0; i < tensor.dimension(0); ++i)
-//     {
-//         for (int j = 0; j < tensor.dimension(1); ++j)
-//         {
-//             for (int k = 0; k < tensor.dimension(2); ++k)
-//             {
-//                 std::cout << "tensor(" << i << ", " << j << ", " << k << ") = " << tensor(i, j, k) << std::endl;
-//             }
-//         }
-//     }
+    needle::Tensor res_tensor = needle::matMul(tensor_1, tensor_2);
 
-//     std::cout << tensor.size() << std::endl;
-// }
+    needle::NdArray expected_res(6, 3, 3);
+    expected_res.setValues({{{14.5625, 22.7575, 5.345}, {5.7375, 9.18, 3.23}, {4.825, 7.9175, 3.755}},
+                            {{11.1625, 16.9425, 12.1525}, {20.06, 23.165, 18.045}, {2.4875, 10.8375, 6.3875}},
+                            {{21.75, 26.68, 27.9125}, {16.14, 16.99, 17.245}, {20.85, 27.8475, 29.5625}},
+                            {{16.9425, 13.83, 25.455}, {11.3175, 18.82, 9.6425}, {18.2325, 19.42, 23.9075}},
+                            {{7.4125, 4.425, 2.8575}, {3.6125, 3.1, 1.92}, {8.865, 4.76, 3.12}},
+                            {{1.4975, 4.795, 4.25}, {4.5325, 9.065, 3.85}, {5.2825, 12.915, 8.375}}});
+
+    needle::NdArray res_ndarray{res_tensor.getNdArray()};
+    for (int i = 0; i < matrix_1.dimension(0); i++)
+    {
+        Eigen::Tensor<float, 2> res_eigen_tensor     = res_ndarray.chip(i, 0);
+        Eigen::MatrixXf         res_eigen_mtx        = eigenTensorToMatrix(res_eigen_tensor, 3, 3);
+        Eigen::Tensor<float, 2> exp_res_eigen_tensor = expected_res.chip(i, 0);
+        Eigen::MatrixXf         exp_res_eigen_mtx    = eigenTensorToMatrix(exp_res_eigen_tensor, 3, 3);
+        EXPECT_TRUE(exp_res_eigen_mtx.isApprox(res_eigen_mtx, 0.001));
+    }
+}
