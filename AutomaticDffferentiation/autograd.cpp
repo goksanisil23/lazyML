@@ -2,12 +2,14 @@
 
 namespace needle
 {
+
+// --------------- Operation --------------- //
 Tensor Operation::operator()(const std::vector<Value *> &inputs)
 {
     throw std::runtime_error("Not implemented");
 }
 
-Eigen::MatrixXd Operation::forward(const std::vector<Eigen::MatrixXd> &inputs)
+NdArray Operation::forward(const std::vector<NdArray> &inputs)
 {
     throw std::runtime_error("Not implemented");
 }
@@ -17,23 +19,25 @@ std::vector<Value> Operation::backward(Value right_gradient, Value node)
     throw std::runtime_error("Not implemented");
 }
 
+// --------------- TensorOperation --------------- //
 Tensor TensorOperation::operator()(const std::vector<Value *> &inputs)
 {
-    return Tensor::makeFromOperation(this, inputs);
+    return Tensor::makeTensorFromOperation(this, inputs);
 }
 
+// --------------- Value --------------- //
 /// A value computed in computation graph, i.e. output of some Operation applied to other Value objects.
-
 void Value::init(Operation                  *operation,
                  const std::vector<Value *> &inputs,
                  const size_t                num_outputs,
-                 const Eigen::MatrixXd      &cached_data,
+                 const NdArray              &cached_data,
                  const OptBool               requires_grad_opt)
 {
-    operation_ = operation;
-    inputs_    = inputs;
+    operation_     = operation;
+    inputs_        = inputs;
+    requires_grad_ = requires_grad_opt;
 
-    if (requires_grad_opt == OptBool::NONE)
+    if (requires_grad_ == OptBool::NONE)
     {
         for (auto input : inputs)
         {
@@ -50,7 +54,7 @@ void Value::init(Operation                  *operation,
 }
 
 // Run compute to realize cached data, avoid recomputation if it's already computed before
-Eigen::MatrixXd Value::realizeCachedData()
+NdArray Value::realizeCachedData()
 {
     if (cached_data_.size() != 0)
     {
@@ -58,7 +62,7 @@ Eigen::MatrixXd Value::realizeCachedData()
     }
     else
     {
-        std::vector<Eigen::MatrixXd> realized_inputs;
+        std::vector<NdArray> realized_inputs;
         for (const auto input : inputs_)
         {
             realized_inputs.push_back(input->realizeCachedData());
@@ -73,12 +77,13 @@ bool Value::isLeaf() const
     return (operation_ == nullptr);
 }
 
-Tensor::Tensor(const Eigen::MatrixXd &cached_data, const OptBool requires_grad)
+// --------------- Tensor --------------- //
+Tensor::Tensor(const NdArray &cached_data, const OptBool requires_grad)
 {
     init(nullptr, {}, 1, cached_data, requires_grad);
 }
 
-Tensor Tensor::makeFromOperation(Operation *operation, const std::vector<Value *> &inputs)
+Tensor Tensor::makeTensorFromOperation(Operation *operation, const std::vector<Value *> &inputs)
 {
     Tensor tensor;
     tensor.init(operation, inputs);
@@ -95,16 +100,16 @@ Tensor Tensor::detach()
     return Tensor::makeConst(this->realizeCachedData());
 }
 
-Tensor Tensor::makeConst(const Eigen::MatrixXd &data, OptBool requires_grad)
+Tensor Tensor::makeConst(const NdArray &data, OptBool requires_grad)
 {
     Tensor tensor;
     tensor.init(nullptr, {}, 1, data, requires_grad);
     return tensor;
 }
 
-Eigen::MatrixXd Tensor::getEigen()
+NdArray Tensor::getNdArray()
 {
-    auto data = this->realizeCachedData();
+    NdArray data = this->realizeCachedData();
     if (kArrayApi == ArrayApi::Eigen)
     {
         return data;
