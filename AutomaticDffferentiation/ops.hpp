@@ -45,7 +45,7 @@ Tensor scalarDivide(Tensor &a, const float scalar)
     return ScalarDiv(scalar)(std::vector<Value *>{&a});
 }
 
-// Operator to matrix-multiply 2 tensors
+// Operator to matrix-multiply 2 tensors, currently only supports 3 dimensions.
 class MatMul : public TensorOperation
 {
   public:
@@ -59,7 +59,7 @@ class MatMul : public TensorOperation
         //  since they contraction indices need to match per matrix multiplication
         if (inputs[0].dimension(0) == inputs[1].dimension(0))
         {
-            Eigen::Tensor<float, 3> res(inputs[0].dimension(0), inputs[0].dimension(1), inputs[1].dimension(2));
+            NdArray res(inputs[0].dimension(0), inputs[0].dimension(1), inputs[1].dimension(2));
             constexpr Eigen::array<Eigen::IndexPair<int>, 1> contraction_pair = {Eigen::IndexPair<int>(1, 0)};
             for (int i = 0; i < inputs[0].dimension(0); i++)
             {
@@ -74,8 +74,7 @@ class MatMul : public TensorOperation
         {
             int max_dim_input = (inputs[0].dimension(0) > inputs[1].dimension(0)) ? 0 : 1;
 
-            Eigen::Tensor<float, 3> res(
-                inputs[max_dim_input].dimension(0), inputs[0].dimension(1), inputs[1].dimension(2));
+            NdArray res(inputs[max_dim_input].dimension(0), inputs[0].dimension(1), inputs[1].dimension(2));
             constexpr Eigen::array<Eigen::IndexPair<int>, 1> contraction_pair = {Eigen::IndexPair<int>(1, 0)};
             for (int i = 0; i < inputs[max_dim_input].dimension(0); i++)
             {
@@ -92,6 +91,50 @@ class MatMul : public TensorOperation
 Tensor matMul(Tensor &a, Tensor &b)
 {
     return MatMul()(std::vector<Value *>{&a, &b});
+}
+
+//  Sum of array elements over given axes
+class Summation : public TensorOperation
+{
+  public:
+    explicit Summation(const int axes) : axes_{axes}
+    {
+    }
+
+    NdArray forward(const std::vector<NdArray> &inputs) override
+    {
+        assert(inputs.size() == 1);
+
+        if (axes_ == -1)
+        {
+            NdArray                 res(1, 1, 1);
+            Eigen::Tensor<float, 0> sum = inputs[0].sum();
+            res(0, 0, 0)                = sum(0);
+            return res;
+        }
+        else
+        {
+            // Eigen::Tensor<float, 1> sum = inputs[0].sum(Eigen::array<int, 2>({0, axes_}));
+            // NdArray                 res(1, 1, sum.dimension(0));
+            // res.chip(0, 0) = sum;
+
+            Eigen::Tensor<float, 1> sum = inputs[0].sum(Eigen::array<int, 2>({0, axes_}));
+            NdArray                 res(1, 1, sum.dimension(0));
+            for (int i = 0; i < sum.dimension(0); i++)
+            {
+                res(0, 0, i) = sum(i);
+            }
+            return res;
+        }
+    }
+
+  private:
+    int axes_{-1}; // -1 :reduction among all axes
+};
+
+Tensor summation(Tensor &a, const int axes = -1)
+{
+    return Summation(axes)(std::vector<Value *>{&a});
 }
 
 } // namespace needle

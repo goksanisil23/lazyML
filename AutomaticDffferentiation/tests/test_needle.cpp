@@ -195,3 +195,48 @@ TEST(OperationTestSuite, MatMulTest_5)
         EXPECT_TRUE(exp_res_eigen_mtx.isApprox(res_eigen_mtx, 0.001));
     }
 }
+
+TEST(OperationTestSuite, SummationTest_1)
+{
+    needle::NdArray matrix_1(1, 3, 5);
+    matrix_1.setValues({{{2.2, 4.35, 1.4, 0.3, 2.65}, {1., 0.85, 2.75, 3.8, 1.55}, {3.2, 2.3, 3.45, 0.7, 0.}}});
+    needle::Tensor tensor_1(matrix_1);
+
+    needle::Tensor res_tensor = needle::summation(tensor_1);
+
+    EXPECT_FLOAT_EQ(res_tensor.getNdArray()(0, 0, 0), 30.5f);
+}
+
+TEST(OperationTestSuite, SummationTest_2)
+{
+    needle::NdArray matrix_1(1, 5, 3);
+    matrix_1.setValues({{{1.05, 2.55, 1.}, {2.95, 3.7, 2.6}, {0.1, 4.1, 3.3}, {1.1, 3.4, 3.4}, {1.8, 4.55, 2.3}}});
+    needle::Tensor tensor_1(matrix_1);
+
+    needle::Tensor res_tensor = needle::summation(tensor_1, 2);
+
+    needle::NdArray         res_ndarray{res_tensor.getNdArray()};
+    Eigen::Tensor<float, 2> res_eigen_tensor = res_ndarray.chip(0, 0);
+    Eigen::MatrixXf         res_eigen_mtx    = eigenTensorToMatrix(res_eigen_tensor, 5, 1);
+
+    Eigen::MatrixXf expected_res(5, 1);
+    expected_res << 4.6, 9.25, 7.5, 7.9, 8.65;
+    EXPECT_TRUE(expected_res.isApprox(res_eigen_mtx, 0.001));
+}
+
+TEST(OperationTestSuite, SummationTest_3)
+{
+    needle::NdArray matrix_1(1, 3, 3);
+    matrix_1.setValues({{{1.5, 3.85, 3.45}, {1.35, 1.3, 0.65}, {2.6, 4.55, 0.25}}});
+    needle::Tensor tensor_1(matrix_1);
+
+    needle::Tensor res_tensor = needle::summation(tensor_1, 1);
+
+    needle::NdArray         res_ndarray{res_tensor.getNdArray()};
+    Eigen::Tensor<float, 2> res_eigen_tensor = res_ndarray.chip(0, 0);
+    Eigen::MatrixXf         res_eigen_mtx    = eigenTensorToMatrix(res_eigen_tensor, 3, 1);
+
+    Eigen::MatrixXf expected_res(3, 1);
+    expected_res << 5.45, 9.7, 4.35;
+    EXPECT_TRUE(expected_res.isApprox(res_eigen_mtx, 0.001));
+}
