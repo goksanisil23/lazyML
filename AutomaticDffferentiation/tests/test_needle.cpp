@@ -95,6 +95,7 @@ TEST(OperationTestSuite, MatMulTest_2)
     EXPECT_TRUE(expected_res.isApprox(res_eigen_mtx, 0.001));
 }
 
+// Matrix multiplication of 3-d arrays of same channel length
 TEST(OperationTestSuite, MatMulTest_3)
 {
     needle::NdArray matrix_1(6, 3, 2);
@@ -123,6 +124,66 @@ TEST(OperationTestSuite, MatMulTest_3)
                             {{16.9425, 13.83, 25.455}, {11.3175, 18.82, 9.6425}, {18.2325, 19.42, 23.9075}},
                             {{7.4125, 4.425, 2.8575}, {3.6125, 3.1, 1.92}, {8.865, 4.76, 3.12}},
                             {{1.4975, 4.795, 4.25}, {4.5325, 9.065, 3.85}, {5.2825, 12.915, 8.375}}});
+
+    needle::NdArray res_ndarray{res_tensor.getNdArray()};
+    for (int i = 0; i < matrix_1.dimension(0); i++)
+    {
+        Eigen::Tensor<float, 2> res_eigen_tensor     = res_ndarray.chip(i, 0);
+        Eigen::MatrixXf         res_eigen_mtx        = eigenTensorToMatrix(res_eigen_tensor, 3, 3);
+        Eigen::Tensor<float, 2> exp_res_eigen_tensor = expected_res.chip(i, 0);
+        Eigen::MatrixXf         exp_res_eigen_mtx    = eigenTensorToMatrix(exp_res_eigen_tensor, 3, 3);
+        EXPECT_TRUE(exp_res_eigen_mtx.isApprox(res_eigen_mtx, 0.001));
+    }
+}
+
+// Matrix multiplication of 3-d arrays of different channel length (1st matrix single, 2nd matrix multi channel)
+TEST(OperationTestSuite, MatMulTest_4)
+{
+    needle::NdArray matrix_1(1, 3, 2);
+    matrix_1.setValues({{{1.9, 1.9}, {4.8, 4.9}, {3.25, 3.75}}});
+    needle::NdArray matrix_2(3, 2, 3);
+    matrix_2.setValues({{{1.25, 1.8, 1.95}, {3.75, 2.85, 2.25}},
+                        {{1.75, 2.7, 3.3}, {2.95, 1.55, 3.85}},
+                        {{4.2, 3.05, 3.35}, {3.3, 4.75, 2.1}}});
+    needle::Tensor tensor_1(matrix_1);
+    needle::Tensor tensor_2(matrix_2);
+
+    needle::Tensor res_tensor = needle::matMul(tensor_1, tensor_2);
+
+    needle::NdArray expected_res(3, 3, 3);
+    expected_res.setValues({{{9.5, 8.835, 7.98}, {24.375, 22.605, 20.385}, {18.125, 16.5375, 14.775}},
+                            {{8.93, 8.075, 13.585}, {22.855, 20.555, 34.705}, {16.75, 14.5875, 25.1625}},
+                            {{14.25, 14.82, 10.355}, {36.33, 37.915, 26.37}, {26.025, 27.725, 18.7625}}});
+
+    needle::NdArray res_ndarray{res_tensor.getNdArray()};
+    for (int i = 0; i < matrix_2.dimension(0); i++)
+    {
+        Eigen::Tensor<float, 2> res_eigen_tensor     = res_ndarray.chip(i, 0);
+        Eigen::MatrixXf         res_eigen_mtx        = eigenTensorToMatrix(res_eigen_tensor, 3, 3);
+        Eigen::Tensor<float, 2> exp_res_eigen_tensor = expected_res.chip(i, 0);
+        Eigen::MatrixXf         exp_res_eigen_mtx    = eigenTensorToMatrix(exp_res_eigen_tensor, 3, 3);
+        EXPECT_TRUE(exp_res_eigen_mtx.isApprox(res_eigen_mtx, 0.001));
+    }
+}
+
+// Matrix multiplication of 3-d arrays of different channel length (2nd matrix single, 1st matrix multi channel)
+TEST(OperationTestSuite, MatMulTest_5)
+{
+    needle::NdArray matrix_1(3, 3, 2);
+    matrix_1.setValues({{{3.4, 2.95}, {0.25, 1.95}, {4.4, 4.4}},
+                        {{0.55, 1.1}, {0.75, 1.55}, {4.1, 1.2}},
+                        {{1.5, 4.05}, {1.5, 1.55}, {2.3, 1.25}}});
+    needle::NdArray matrix_2(1, 2, 3);
+    matrix_2.setValues({{{2.2, 0.65, 2.5}, {2.5, 1.3, 0.15}}});
+    needle::Tensor tensor_1(matrix_1);
+    needle::Tensor tensor_2(matrix_2);
+
+    needle::Tensor res_tensor = needle::matMul(tensor_1, tensor_2);
+
+    needle::NdArray expected_res(3, 3, 3);
+    expected_res.setValues({{{14.855, 6.045, 8.9425}, {5.425, 2.6975, 0.9175}, {20.68, 8.58, 11.66}},
+                            {{3.96, 1.7875, 1.54}, {5.525, 2.5025, 2.1075}, {12.02, 4.225, 10.43}},
+                            {{13.425, 6.24, 4.3575}, {7.175, 2.99, 3.9825}, {8.185, 3.12, 5.9375}}});
 
     needle::NdArray res_ndarray{res_tensor.getNdArray()};
     for (int i = 0; i < matrix_1.dimension(0); i++)
