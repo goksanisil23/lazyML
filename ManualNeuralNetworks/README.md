@@ -31,7 +31,7 @@ By randomly sampling mini-batches, SGD approximates the true gradient of the los
 The noise in SGD allows escaping local minima and faster convergence, but shows more fluctuation compared to regular gradient descent.
 - Our hypothesis `h_θ(x)` can take any real value. For multi-class classification, we would prefer to have a probability where the sum of all output nodes adds to 1.0. This is enabled by the **softmax** function:
 
-<img src="https://raw.githubusercontent.com/goksanisil23/lazyML/main/ManualNeuralNetworks/resources/softmax.png" width=20% height=30%>
+<img src="https://raw.githubusercontent.com/goksanisil23/lazyML/main/ManualNeuralNetworks/resources/softmax.png" width=13% height=10%>
 
 Then, we define the loss function to be the negative log probability of our network predicting the true class label. (also called *cross-entropy loss*)
 
