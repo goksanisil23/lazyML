@@ -12,14 +12,37 @@ Numeric differentiation is powerful, but it requires 2 forward passes to compute
 The downside of forward mode AD is that for `f : R^n -> R^k`, we need `n` forward AD passes to get the gradient w.r.t each input.   
 
 **Reverse mode auto diff**: 
-1- Start with forward pass, evaluate intermediate variables, store values and dependencies of intermediate variables.
-2- Compute partial derivatives of the output, w.r.t intermediate variables = Adjoints
-
 <img src="https://raw.githubusercontent.com/goksanisil23/lazyML/main/AutomaticDffferentiation/resources/reverse_mode_AD.png" width=30% height=50%>
 
+There are 2 main components to consider while doing backprop, due to chain rule: adjoints & local node gradients
+ - `backward_gradient = adjoint * local_gradient` 
+ - adjoints capture what has happened on the right side of the graph
+ - local node gradients capture whats currently happening in the node.
 
+If a node is `z = f(x,y) = x * y`, right_gradient is `∂L/∂z = dz`. --> This is called adjoint: Gradient of the loss function, w.r.t output of a specific layer.
+dz = starting from the end (right side) how the loss function has been effected by the output of this node (z). Since computed backwards, this dz is available
 
-## TODO: Render the computation graph
+<img src="https://raw.githubusercontent.com/goksanisil23/lazyML/main/AutomaticDffferentiation/resources/single_node_backprop.png" width=30% height=50%>
+
+Given a node `v_i`, a partial adjoint is defined as `∂L/∂v_i`. If node `v_i` is connected to multiple nodes towards right, partial adjoint of `v_i` is computed by sum of the partial derivatives of those nodes w.r.t `v_i` (look at `v_2` below:)
+
+<img src="https://raw.githubusercontent.com/goksanisil23/lazyML/main/AutomaticDffferentiation/resources/computation_graph.png" width=30% height=50%>
+<img src="https://raw.githubusercontent.com/goksanisil23/lazyML/main/AutomaticDffferentiation/resources/adjoint.png" width=30% height=50%>
+
+How we compute backward gradient:
+- assume a node is `f(x,y)`. We want to compute `∂L/∂x` and `∂L/∂y` (backwards gradient per each input to this node)
+- `∂L/∂x = (∂L/∂f(x,y)) * (∂f(x,y)/∂x)`
+    - We know the `∂L/∂f(x,y)` since via back-prop, it's available.
+    - We just need to compute `∂f/∂x`, which is straightforward since we know exactly what `f(x,y)` is which is the operation in this node.
+
+When dealing with back-prop, topological sort allows us to have `∂L/∂f(x,y)` available, because sorting allows us to start from the end of the graph and run backwards towards the dependencies(inputs) of the nodes.
+
+Once the backward gradient is calculated, backward_grad*adjoint is distributed to the input of the current node, and the process is continued towards left.
+-> result we're passing now becomes *one of* the **partial adjoint** on the next node on the left.
+
+The core of backprop can be summarized as below:
+<img src="https://raw.githubusercontent.com/goksanisil23/lazyML/main/AutomaticDffferentiation/resources/backprop_core.png" width=30% height=50%>
+
 
 
 ## RUN
