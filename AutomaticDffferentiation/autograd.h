@@ -7,15 +7,15 @@
 #include <stdexcept>
 #include <vector>
 
-#include <Eigen/Core>
-#include <Eigen/Dense>
 #include <unsupported/Eigen/CXX11/Tensor>
+
+#include "Fastor/Fastor.h"
 
 namespace needle
 {
 
 // Forward declerations
-class Value;
+// template <size_t Dims>
 class Tensor;
 
 enum class OptBool
@@ -27,20 +27,27 @@ enum class OptBool
 
 enum class ArrayApi
 {
-    Eigen = 0
+    Fastor = 0
 };
 
 constexpr bool     kLazyMode{false};
-constexpr ArrayApi kArrayApi{ArrayApi::Eigen};
-using NdArray = Eigen::Tensor<float, 3>; // TODO: We only support 3d-arrays now
+constexpr ArrayApi kArrayApi{ArrayApi::Fastor};
 
-class Operation
+template <size_t... Dims>
+using NdArray = Fastor::Tensor<float, Dims...>;
+
+class TensorOp
 {
   public:
-    virtual Tensor operator()(const std::vector<Value *> &inputs);
+    template <typename... Ts>
+    auto operator()(const Ts &...tensor_inputs)
+    {
+        return Tensor::makeTensorFromOperation(this, tensor_inputs...);
+    }
 
     /// Calculate forward pass of the operator. It directly executes on the raw data.
-    virtual NdArray forward(const std::vector<NdArray> &inputs);
+    template <typename... Ts>
+    auto forward(const Ts &...array_inputs);
 
     /// If a node is z = x * y, right_gradient is ∂L/∂z = dz
     /// dz = starting from the end(right side) how the loss function has been effected by the output of this node (z).
@@ -48,67 +55,111 @@ class Operation
     /// @param right_gradient  ∂L/∂z = how the output of this node affects the loss
     /// @param node  Value of the node in forward iteration
     /// @return         left_gradient: result of the backward iteration: Partial (backwards) gradients to be propagated to each (forward) input node
-    virtual std::vector<Value> backward(Value right_gradient, Value node);
-};
-
-class TensorOperation : public Operation
-{
-  public:
-    Tensor operator()(const std::vector<Value *> &inputs) override;
+    // std::vector<Tensor> backward(Tensor right_gradient, Tensor node);
 };
 
 /// A value computed in computation graph, i.e. output of some Operation applied to other Value objects.
-class Value
+class Tensor
 {
   public:
-    void init(Operation                  *operation,
-              const std::vector<Value *> &inputs,
-              const size_t                num_outputs       = 1,
-              const NdArray              &cached_data       = NdArray(),
-              const OptBool               requires_grad_opt = OptBool::NONE);
+    // Construct a tensor object from raw data
+    template <size_t... Dims>
+    Tensor(const NdArray<Dims...> ndarray_in, OptBool requires_grad = OptBool::TRUE) : cached_data(ndarray_in)
+    {
+        requires_grad_ = requires_grad;
+    }
 
-    // static Value makeFromOperation(Operation *operation, const std::vector<Value *> &inputs)
+    template <typename... Ts>
+    Tensor(TensorOp *operation, const Ts &...inputs, OptBool requires_grad = OptBool::TRUE)
+    {
+        operation_     = operation;
+        requires_grad_ = requires_grad;
+
+        if (requires_grad_ == OptBool::NONE)
+        {
+            for (auto input : inputs)
+            {
+                if (input.requires_grad_ == OptBool::TRUE)
+                {
+                    requires_grad_ = OptBool::TRUE;
+                    break;
+                }
+            }
+        }
+    }
+
+    template <typename... Ts>
+    static Tensor makeTensorFromOperation(TensorOp *operation, const Ts &...inputs)
+    {
+        Tensor tensor(operation, inputs...);
+        if (!kLazyMode)
+        {
+            tensor.realizeCachedData(inputs...);
+        }
+        return tensor;
+    }
+
+    template <typename... Ts>
+    void realizeCachedData(const Ts &...inputs)
+    // NdArray<Dims> realizeCachedData()
+    {
+        // If cached data is not None (already been computed)
+        if (cached_data_.size() != 0)
+        {
+            return cached_data_;
+        }
+        else
+        {
+            // std::vector<NdArray> realized_inputs;
+            for (const auto input : inputs)
+            {
+                std::cout << input.size() << std::endl;
+                // realized_inputs.push_back(input->realizeCachedData());
+            }
+            // cached_data_ = operation_->forward(realized_inputs);
+            // return cached_data_;
+        }
+    }
+
+    // Create a new tensor that shares the data but detaches from the graph
+    // Tensor<Dims> detach()
     // {
-    //     Value value;
-    //     value.init(operation, inputs);
-
-    //     if (!kLazyMode)
-    //     {
-    //         if (value.requires_grad_ != OptBool::TRUE)
-    //         {
-    //             return value.detach(); // TODO: WTF is this?
-    //         }
-    //         value.realizeCachedData();
-    //     }
-    //     return value;
+    //     return makeConst(this->realizeCachedData());
     // }
 
-    // Run compute to realize cached data, avoid recomputation if it's already computed before
-    NdArray realizeCachedData();
+    // static Tensor makeConst(const NdArray &data, OptBool requires_grad = OptBool::FALSE)
+    // {
+    //     Tensor<Dims> tensor;
+    //     tensor.init(nullptr, {}, 1, data, requires_grad);
+    //     return tensor;
+    // }
 
-    bool isLeaf() const;
+    // bool isLeaf() const
+    // {
+    //     return (operation_ == nullptr);
+    // }
+
+    // NdArray<Dims> getNdArray()
+    // {
+    //     NdArray<Dims> data = this->realizeCachedData();
+    //     if (kArrayApi == ArrayApi::Eigen)
+    //     {
+    //         return data;
+    //     }
+    //     else
+    //     {
+    //         throw("we should only have Eigen for now");
+    //     }
+    // }
 
   public:
-    Operation           *operation_{nullptr};
-    std::vector<Value *> inputs_; // TODO: avoid this copy
-    size_t               num_outputs_{1};
+    TensorOp           *operation_{nullptr};
+    std::vector<Tensor> inputs_; // TODO: avoid this copy
+    size_t              num_outputs_{1};
+
     // Fields for dynamic computation
-    NdArray cached_data_;
+    // NdArray<Dims...> cached_data_;
     OptBool requires_grad_{};
 };
 
-class Tensor : public Value
-{
-  public:
-    Tensor(const NdArray &cached_data = NdArray(), const OptBool requires_grad = OptBool::TRUE);
-
-    static Tensor makeTensorFromOperation(Operation *operation, const std::vector<Value *> &inputs);
-
-    // Create a new tensor that shares the data but detaches from the graph
-    Tensor detach();
-
-    static Tensor makeConst(const NdArray &data, OptBool requires_grad = OptBool::FALSE);
-
-    NdArray getNdArray();
-};
 } // namespace needle

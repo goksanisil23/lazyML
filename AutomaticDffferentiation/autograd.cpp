@@ -3,24 +3,8 @@
 namespace needle
 {
 
-// --------------- Operation --------------- //
-Tensor Operation::operator()(const std::vector<Value *> &inputs)
-{
-    throw std::runtime_error("Not implemented");
-}
-
-NdArray Operation::forward(const std::vector<NdArray> &inputs)
-{
-    throw std::runtime_error("Not implemented");
-}
-
-std::vector<Value> Operation::backward(Value right_gradient, Value node)
-{
-    throw std::runtime_error("Not implemented");
-}
-
-// --------------- TensorOperation --------------- //
-Tensor TensorOperation::operator()(const std::vector<Value *> &inputs)
+// --------------- TensorOp --------------- //
+Tensor TensorOp::operator()(const std::vector<Tensor *> &inputs)
 {
     return Tensor::makeTensorFromOperation(this, inputs);
 }

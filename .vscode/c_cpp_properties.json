@@ -5,7 +5,8 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "/usr/include/eigen3/",
-                "/usr/include/SDL2/"
+                "/usr/include/SDL2/",
+                "/home/s0001734/Downloads/Fastor/"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",
